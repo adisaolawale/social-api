@@ -17,6 +17,10 @@ const options = {
                 url: 'http://localhost:3000',
                 description: 'Development server'
             },
+            {
+                url: 'https://social-api-ereo.onrender.com',
+                description: 'Production server'
+            }
         ],
         components: {
             securitySchemes: {
