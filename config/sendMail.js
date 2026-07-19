@@ -18,7 +18,7 @@ const nodemailer = require('nodemailer');
 
 const transport = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 587,
+  port: 465,
   secure: false, // TLS upgrade
   requireTLS: true,
   auth: {
