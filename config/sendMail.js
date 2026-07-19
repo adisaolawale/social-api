@@ -12,6 +12,8 @@
 
 // module.exports = transport;
 
+const dotenv = require('dotenv');
+dotenv.config();
 const nodemailer = require('nodemailer');
 
 const transport = nodemailer.createTransport({
@@ -24,9 +26,9 @@ const transport = nodemailer.createTransport({
     pass: process.env.NODE_CODE_SENDING_EMAIL_PASSWORD,
   },
   tls: {
-    family: 4, // 👈 FORCE IPv4 (CRITICAL)
+    family: 4, // FORCE IPv4 (CRITICAL)
   },
-  connectionTimeout: 100000,
+  connectionTimeout: 10000,
 });
 
 module.exports = transport;
