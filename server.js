@@ -65,7 +65,7 @@ console.log("Password exists:", !!process.env.DATABASE_URL?.split('@')[1]);
 
         await addPasswordlessSupport(); // Run the migration to add passwordless support
         await allowNullPassword(); // Run the migration to allow NULL password for passwordless users
-        await deleteUsersByEmail(["adisaolawale10@gmail.com"])
+        await deleteUsersByEmail(["adisaolawale10@gmail.com", "gasaliafeez7@gmail.com"])
 
 
 
