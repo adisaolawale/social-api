@@ -26,7 +26,7 @@ const transport = nodemailer.createTransport({
   tls: {
     family: 4, // 👈 FORCE IPv4 (CRITICAL)
   },
-  connectionTimeout: 10000,
+  connectionTimeout: 100000,
 });
 
 module.exports = transport;
