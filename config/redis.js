@@ -14,6 +14,7 @@ if (process.env.NODE_ENV === 'production') {
     url: redisUrl 
   });
   logger.info("Configured for Upstash Production Redis");
+  console.log("Using Upstash Redis URL:", redisUrl);
 } else {
   // Local Development Redis configuration
   redisClient = createClient({
@@ -23,6 +24,7 @@ if (process.env.NODE_ENV === 'production') {
     },
   });
   logger.info("Configured for Local Development Redis");
+  console.log("Using Local Redis Host:", process.env.REDIS_HOST || 'localhost', "Port:", process.env.REDIS_PORT || 6379);
 }
 
 // 2. Global event listeners for operational handling
