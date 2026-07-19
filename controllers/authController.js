@@ -48,10 +48,9 @@ const sendVerificationCodeForUnverifiedUser = async (user) => {
     );
 
     await transport.sendMail({
-        from: process.env.NODE_CODE_SENDING_EMAIL_ADDRESS,
         to: user.email,
         subject: 'Verify your account',
-        html: verificationEmailTemplate(user.fullName, verificationToken)
+        html: verificationEmailTemplate(user.full_name, verificationToken)
     });
 
     return identificationToken;
@@ -82,10 +81,9 @@ const sendVerificationCodeForLogin = async (user) => {
     );
 
     await transport.sendMail({
-        from: process.env.NODE_CODE_SENDING_EMAIL_ADDRESS,
         to: user.email,
         subject: 'Your Login Code',
-        html: verificationEmailTemplate(user.fullName || 'User', otp)
+        html: verificationEmailTemplate(user.full_name || 'User', otp)
     });
 
     return identificationToken;
@@ -161,10 +159,9 @@ const register = async (req, res, next) => {
         // await sendWelcomeEmail(user, verificationToken)
 
         await transport.sendMail({
-            from: process.env.NODE_CODE_SENDING_EMAIL_ADDRESS,
             to: user.email,
             subject: 'Welcome to our app! Please verify your email',
-            html: verificationEmailTemplate(user.fullName, verificationToken)
+            html: verificationEmailTemplate(user.full_name, verificationToken)
         })
 
 
@@ -246,10 +243,9 @@ const resendVerificationCode = async (req, res, next) => {
 
         // Send email
         await transport.sendMail({
-            from: process.env.NODE_CODE_SENDING_EMAIL_ADDRESS,
             to: user.email,
             subject: 'Your new verification code',
-            html: verificationEmailTemplate(user.fullName, newVerificationToken)
+            html: verificationEmailTemplate(user.full_name, newVerificationToken)
         });
 
         return successResponse(res, {
@@ -766,7 +762,6 @@ const forgotPassword = async (req, res, next) => {
         // Send email - non blocking
 
         await transport.sendMail({
-            from: process.env.NODE_CODE_SENDING_EMAIL_ADDRESS,
             to: user.email,
             subject: 'Password Reset Request',
             html: passwordResetEmailTemplate(user.fullName, resetToken)
