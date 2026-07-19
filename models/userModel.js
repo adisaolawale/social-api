@@ -59,14 +59,46 @@ const createUserTable = async () => {
 
 const UserModel = {
   // Create new user
-  create: async ({ username, email, password, fullName }) => {
+  // In userModel.js
+  create: async ({
+    username,
+    email,
+    password,           // Can be null for passwordless users
+    fullName,
+    provider = 'password',
+    has_password = false
+  }) => {
     const createUserQuery = `
-          INSERT INTO users (username, email, password, full_name)
-          VALUES ($1, $2, $3, $4)
-          RETURNING id, username, email, full_name, created_at
-        `;
-    const result = await dbQuery(createUserQuery, [username, email, password, fullName]);
-    return result.rows[0]
+        INSERT INTO users (
+            username, 
+            email, 
+            password, 
+            full_name, 
+            provider, 
+            has_password
+        )
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING 
+            id, 
+            username, 
+            email, 
+            full_name, 
+            provider, 
+            has_password, 
+            is_verified,
+            created_at
+    `;
+
+    const result = await dbQuery(createUserQuery, [
+      username,
+      email,
+      password,
+      fullName,
+      provider,
+      has_password
+    ]);
+
+    return result.rows[0];
   },
 
   // =============================
@@ -125,6 +157,26 @@ const UserModel = {
     `
     const result = await dbQuery(updateAvatarQuery, [avatarUrl, userId])
     return result.rows[0] || null
+  },
+
+
+  updateUsername: async (userId, newUsername) => {
+    const existing = await dbQuery(
+      `SELECT id FROM users WHERE username = $1 AND id != $2`,
+      [newUsername, userId]
+    );
+    if (existing.rows.length > 0) {
+      return { error: 'USERNAME_TAKEN' };
+    }
+
+    const result = await dbQuery(
+      `UPDATE users
+     SET username = $1, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2
+     RETURNING id, username, updated_at`,
+      [newUsername, userId]
+    );
+    return { user: result.rows[0] };
   },
 
   // ===============================
@@ -232,20 +284,7 @@ const UserModel = {
   findById: async (id) => {
     const result = await dbQuery(
       `SELECT
-         id,
-         username,
-         email,
-         full_name,
-         bio,
-         avatar_url,
-         website,
-         location,
-         role,
-         is_active,
-         is_verified,
-         is_private,
-         last_seen,
-         created_at
+         *
        FROM users
        WHERE id = $1`,
       [id]

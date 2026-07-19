@@ -1,17 +1,8 @@
 const Joi = require('joi');
 
-// Register validation
+
 const registerValidator = (data) => {
     const schema = Joi.object({
-        username: Joi.string()
-            .min(3)
-            .max(50)
-            .required()
-            .messages({
-                'string.min': 'Name must be atleast 3 characters',
-                'string.max': 'Name cannot exceed 50 characters',
-                'any.required': 'Username is required'
-            }),
         fullName: Joi.string()
             .min(3)
             .max(50)
@@ -102,7 +93,7 @@ const updateProfileValidator = (data) => {
     return schema.validate(data, { abortEarly: false })
 }
 
-// Change password validator
+
 const changePasswordValidator = (data) => {
     const schema = Joi.object({
         currentPassword: Joi.string()
@@ -127,9 +118,28 @@ const changePasswordValidator = (data) => {
 }
 
 
+const updateUsernameValidator = (data) => {
+    const schema = Joi.object({
+        username: Joi.string()
+            .alphanum()
+            .min(3)
+            .max(30)
+            .required()
+            .messages({
+                'string.alphanum': 'Username can only contain letters and numbers',
+                'string.min': 'Username must be at least 3 characters',
+                'string.max': 'Username cannot exceed 30 characters',
+                'any.required': 'Username is required',
+            }),
+    });
+    return schema.validate(data, { abortEarly: false });
+};
+
+
 module.exports = {
     registerValidator,
     loginValidator,
+    updateUsernameValidator,
     updateProfileValidator,
     changePasswordValidator
 }

@@ -6,6 +6,7 @@ const { PostModel } = require("../models/postModel");
 const { commentValidator, updateCommentValidator } = require("../validators/commentValidator");
 const AppError = require('../utils/AppError');
 const { successResponse } = require('../utils/response');
+const { invalidatePostCaches } = require('../utils/postCache');
 
 
 // @desc     Add comment to post
@@ -34,6 +35,7 @@ const createComment = async (req, res, next) => {
             userId: req.user.id,
             content
         });
+        await invalidatePostCaches(postId);
 
         // Fetch full comment with user data to return
         //const comment = await CommentModel.findById(newComment.id)
@@ -289,6 +291,7 @@ const deleteComment = async (req, res, next) => {
             postId: existingComment.post_id,
             parentId: existingComment.parent_id
         });
+        await invalidatePostCaches(postId);
 
 
         return successResponse(res, {

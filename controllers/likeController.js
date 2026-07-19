@@ -6,6 +6,7 @@ const { NotificationModel } = require("../models/notificationModel");
 const { PostModel } = require("../models/postModel");
 const AppError = require('../utils/AppError');
 const { successResponse } = require('../utils/response');
+const { invalidatePostCaches } = require('../utils/postCache');
 
 
 // @desc     Like a post
@@ -38,6 +39,8 @@ const likePost = async (req, res, next) => {
             userId: req.user.id,
             postId
         });
+
+        await invalidatePostCaches(postId);
 
         const notification = await NotificationModel.create({
             recipientId: post.user_id,
@@ -97,6 +100,7 @@ const unlikePost = async (req, res, next) => {
             userId: req.user.id,
             postId
         });
+        await invalidatePostCaches(postId);
 
         // Remove the notification when they unlike 
         await NotificationModel.deleteByEntity({
@@ -186,7 +190,7 @@ const unlikeComment = async (req, res, next) => {
 
 
         // Unlike the post
-        await LikeModel.unlikeCommnent({
+        await LikeModel.unlikeComment({
             userId: req.user.id,
             commentId
         });

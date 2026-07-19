@@ -13,7 +13,8 @@ const sendEmailResend = require('../utils/sendEmailResend');
 const { registerValidator, loginValidator, updateProfileValidator } = require('../validators/authValidator');
 const { PostModel } = require('../models/postModel');
 const { FollowModel } = require('../models/followModel');
-
+const { generateUniqueUsernamesFromName } = require('../utils/generateUniqueUsername');
+const { updateUsernameValidator } = require('../validators/authValidator');
 
 
 // @desc   Get my profile
@@ -28,9 +29,13 @@ const getMe = async (req, res, next) => {
 
         console.log(user)
 
+        const {password: _, ...safeUser} = user
+
+        console.log(safeUser)
+
         return successResponse(res, {
             message: 'User fetched successfully',
-            data: { user }
+            data: { user: safeUser }
         })
     } catch (error) {
         next(error)
@@ -54,7 +59,10 @@ const getProfile = async (req, res, next) => {
         // Check if logged in user follows this profile
         // FollowModel will be wired in once follow is built
         // For now is_folowing default to false
-        user.is_following = false
+        // Check if logged in user follows this profile
+        user.is_following = req.user
+            ? await FollowModel.isFollowing({ followerId: req.user.id, followingId: user.id })
+            : false;
 
 
         // If account is private and requester is not following
@@ -117,6 +125,36 @@ const updateProfile = async (req, res, next) => {
         return successResponse(res, {
             message: 'Profile updated successfully',
             data: { user }
+        });
+    } catch (error) {
+        next(error)
+    }
+};
+
+
+
+const updateUsername = async (req, res, next) => {
+    try {
+        const { error } = updateUsernameValidator(req.body);
+        if (error) {
+            return next(new AppError(error.details.map((err) => err.message).join(', '), 400));
+        }
+
+        const { username } = req.body;
+        const result = await UserModel.updateUsername(req.user.id, username);
+
+        if (result.error === 'USERNAME_TAKEN') {
+            const suggestions = await generateUniqueUsernamesFromName(username, 5);
+            return res.status(409).json({
+                success: false,
+                message: 'This username is already taken',
+                data: { suggestions }
+            });
+        }
+
+        return successResponse(res, {
+            message: 'Username updated successfully',
+            data: { user: result.user }
         });
     } catch (error) {
         next(error)
@@ -331,6 +369,7 @@ module.exports = {
     getMe,
     getProfile,
     updateProfile,
+    updateUsername,
     deactivateAccount,
     changePassword,
     searchUsers,

@@ -1,5 +1,5 @@
 const express = require('express');
-const { getProfile, getMe, updateProfile, changePassword, searchUsers, getFollowers, getFollowing, getUserPosts, deactivateAccount } = require("../controllers/userController");
+const { getProfile, getMe, updateProfile, updateUsername, changePassword, searchUsers, getFollowers, getFollowing, getUserPosts, deactivateAccount } = require("../controllers/userController");
 const { protect } = require("../middleware/authMiddleware");
 const router = express.Router()
 
@@ -158,6 +158,8 @@ router.get('/me', protect, getMe);
 router.patch('/me', protect, updateProfile);
 
 
+router.patch('/me/username', protect, updateUsername);
+
 
 /**
  *  @swagger
@@ -241,6 +243,9 @@ router.patch('/me/password', protect, changePassword);
  *                      example: Password changed successfully  
  */
 router.delete('/me', protect, deactivateAccount);
+
+
+
 
 
 /**

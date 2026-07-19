@@ -1,5 +1,22 @@
 const express = require('express');
-const { register, login, getProfile, updateProfile, deleteProfile, logout, refreshToken, verifyEmail, forgotPassword, resetPassword } = require('../controllers/authController');
+const { 
+    register, 
+    login,
+    loginPasswordless,
+    verifyLoginOTP,
+    setPassword,
+    resendVerificationCode, 
+    getProfile, 
+    updateProfile, 
+    deleteProfile, 
+    logout, 
+    logoutWeb, 
+    refreshToken, 
+    verifyEmail, 
+    forgotPassword, 
+    resetPassword, 
+    verifyPasswordEmail 
+} = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 const slidingLimiter = require('../config/slidingRateLimit');
 const { registerLimiter, loginLimiter } = require('../middleware/rateLimiterMiddleware');
@@ -137,6 +154,14 @@ router.post('/register',
  */
 router.post('/login', loginLimiter, login); // add LoginLimiter
 
+router.post('/resend-verification-code/:identificationTokens', resendVerificationCode);
+
+router.post('/login-passwordless', loginPasswordless);
+
+router.post('/verify-login-otp', verifyLoginOTP);
+
+router.post('/set-password', protect, setPassword);
+
 /**
  *  @swagger
  *  /api/auth/refresh:
@@ -214,7 +239,7 @@ router.post('/refresh', refreshToken)
  *                schema:
  *                  $ref: '#/components/schemas/Error'
  */
-router.post('/verify-email/:token', verifyEmail)
+router.post('/verify-email/:identificationToken', verifyEmail)
 
 /**
  *  @swagger
@@ -251,7 +276,6 @@ router.post('/verify-email/:token', verifyEmail)
  *                      example: Reset email sent if account exists     
  */
 router.post('/forgot-password', forgotPassword);
-
 
 /**
  *  @swagger
@@ -299,7 +323,55 @@ router.post('/forgot-password', forgotPassword);
  *                schema:
  *                  $ref: '#/components/schemas/Error'     
  */
-router.post('/reset-password/:token', resetPassword);
+router.post('/verify-password/:token', verifyPasswordEmail);
+
+/**
+ *  @swagger
+ *  /api/auth/reset-password/{token}:
+ *    post:
+ *      summary: Reset password with token
+ *      tags: [Auth]
+ *      security: []
+ *      parameters:
+ *        - in: path
+ *          name: token
+ *          required: true
+ *          schema:
+ *            type: string
+ *      requestBody:
+ *        required: true
+ *        content:
+ *          application/json:
+ *            schema:
+ *              type: object
+ *              required:
+ *                - password
+ *              properties:
+ *                password:
+ *                  type: string
+ *                  example: Password@123
+ *      responses:
+ *          200:
+ *            description: Password reset successfully   
+ *            content:
+ *              application/json:
+ *                schema:
+ *                  type: object
+ *                  properties:
+ *                    success:
+ *                      type: boolean
+ *                      example: true
+ *                    message:
+ *                      type: string
+ *                      example: Password reset successfully
+ *          400:
+ *            description: Invalid or expired verification token
+ *            content:
+ *              application/json:
+ *                schema:
+ *                  $ref: '#/components/schemas/Error'     
+ */
+router.post('/reset-password/:cryptoToken', resetPassword);
 
 /**
  *  @swagger
@@ -361,6 +433,39 @@ router.delete('/profile', protect, deleteProfile);
  *                schema:
  *                  $ref: '#/components/schemas/Error'     
  */
-router.post('/logout', protect, logout);
+router.post('/logout', protect, logoutWeb);
+
+
+
+/**
+ *  @swagger
+ *  /api/auth/logout:
+ *    post:
+ *      summary: Logout and revoke refresh token
+ *      tags: [Auth]
+ *      security:
+ *        - bearerAuth: []
+ *      responses:
+ *          200:
+ *            description: Logged out successfully
+ *            content:
+ *              application/json:
+ *                schema:
+ *                  type: object
+ *                  properties:
+ *                    success:
+ *                      type: boolean
+ *                      example: true
+ *                    message:
+ *                      type: string
+ *                      example: Logged out successfully    
+ *          401:
+ *            description: Not authorized
+ *            content:
+ *              application/json:
+ *                schema:
+ *                  $ref: '#/components/schemas/Error'     
+ */
+router.post('/logout-app', protect, logout);
 
 module.exports = router;

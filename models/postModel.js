@@ -294,7 +294,16 @@ const PostModel = {
       [id]
     )
     return result.rows[0];
-  }
+  },
+
+  // postModel.js — add alongside incrementViews/incrementLikes
+  incrementShares: async (id) => {
+    const result = await dbQuery(
+      `UPDATE posts SET shares_count = shares_count + 1 WHERE id = $1 RETURNING shares_count`,
+      [id]
+    )
+    return result.rows[0];
+  },
 }
 
 module.exports = {

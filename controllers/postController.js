@@ -22,7 +22,8 @@ const createPost = async (req, res, next) => {
             user_id: req.user.id,
             content,
             media_urls,
-            thumbnail_url
+            thumbnail_url,
+            media_type
         });
 
         // Invalidate posts cache
@@ -47,37 +48,69 @@ const createPost = async (req, res, next) => {
 // @desc     Get all posts
 // @route    GET /api/posts
 // @access   Public
+// postController.js
 const getAllPosts = async (req, res, next) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
 
-        // Check Redis cache
-        const cacheKey = `posts:all:page:${page}:limit:${limit}`
+        const cacheKey = `posts:all:page:${page}:limit:${limit}`;
         const cachedPosts = await redis.get(cacheKey)
 
         if (cachedPosts) {
             return successResponse(res, {
                 message: 'Post fetched from cache',
-                data: JSON.parse(cachedPosts)
+                data: cachedPosts
             });
         }
 
+        const data = await PostModel.findAll({ page, limit, id: req.user?.id || null }); // add id here
 
-        const data = await PostModel.findAll({ page, limit });
-
-        // Cache for 5 minutes
         await redis.set(cacheKey, data, 300);
 
-        return successResponse(res, {
-            message: 'Post fetched successfully',
-            data
-        });
-
+        return successResponse(res, { message: 'Post fetched successfully', data });
     } catch (error) {
         next(error)
     }
 }
+
+// const getAllPosts = async (req, res, next) => {
+//     try {
+//         const page = parseInt(req.query.page) || 1;
+//         const limit = parseInt(req.query.limit) || 10;
+
+//         // Check Redis cache
+//         const cacheKey = `posts:all:page:${page}:limit:${limit}`
+//         const cachedPosts = await redis.get(cacheKey)
+
+//         if (cachedPosts) {
+//             return successResponse(res, {
+//                 message: 'Post fetched from cache',
+//                 data: cachedPosts
+//             });
+//         }
+
+//         console.log(cachedPosts, 'cachedPosts')
+
+
+//         const data = await PostModel.findAll({ page, limit });
+
+//         console.log(data, 'data')
+//         // Cache for 5 minutes
+//         await redis.set(cacheKey, data, 300);
+
+//         return successResponse(res, {
+//             message: 'Post fetched successfully',
+//             data
+//         });
+
+//     } catch (error) {
+//         next(error)
+//     }
+// }
+
+
+
 
 
 // @desc     Get single posts
@@ -93,12 +126,12 @@ const getPost = async (req, res, next) => {
         if (cachedPosts) {
             return successResponse(res, {
                 message: 'Post fetched from cache',
-                data: JSON.parse(cachedPosts)
+                data: cachedPosts
             });
         }
 
 
-        const post = await PostModel.findById(postId);
+        const post = await PostModel.findById(postId, req.user?.id || null);
         if (!post) {
             return next(new AppError('Post not found', 404));
         }
@@ -135,7 +168,7 @@ const getUserPosts = async (req, res, next) => {
         if (cachedPosts) {
             return successResponse(res, {
                 message: 'Posts fetched from cache',
-                data: JSON.parse(cachedPosts)
+                data: cachedPosts
             });
         }
 
@@ -241,11 +274,38 @@ const deletePost = async (req, res, next) => {
 }
 
 
+// @desc     Share a post (increments share count)
+// @route    POST /api/posts/:postId/share
+// @access   Public
+const sharePost = async (req, res, next) => {
+    try {
+        const { postId } = req.params;
+
+        const post = await PostModel.findById(postId);
+        if (!post) {
+            return next(new AppError('Post not found', 404));
+        }
+
+        const result = await PostModel.incrementShares(postId);
+
+        // Invalidate cached single-post view so the new count shows up
+        await redis.del(`post:${postId}`);
+
+        return successResponse(res, {
+            message: 'Post shared successfully',
+            data: { shares_count: result.shares_count }
+        });
+    } catch (error) {
+        next(error)
+    }
+}
+
 module.exports = {
     createPost,
     getAllPosts,
     getPost,
     getUserPosts,
     updatePost,
-    deletePost
+    deletePost,
+    sharePost // add this export
 }

@@ -1,8 +1,9 @@
+require('dotenv').config();
 require("./config/loadEnv")
 
 const http = require('http');
 
-
+ 
 
 
 const app = require('./app');
@@ -24,11 +25,16 @@ const { createNotificationsTable } = require('./models/notificationModel');
 const { createUploadsTable } = require('./models/uploadModel')
 const { createSessionTable } = require('./models/sessionModel')
 
+const { addPasswordlessSupport } = require('./migrations/add_passwordless_support');
+const { allowNullPassword } = require('./migrations/allow_null_password');
+
+const { deleteUsersByEmail } = require('./scripts/delete_user_by_email');
+
 const { createLogTable } = require('./models/logModel');
 const { createTokenTable } = require('./models/tokenModel');
 
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 
 
@@ -36,9 +42,10 @@ const startServer = async () => {
     try {
         logger.info(process.env.NODE_ENV + ' environment initialized successfully');
 
-
+console.log("DATABASE_URL loaded:", !!process.env.DATABASE_URL);
+console.log("Password exists:", !!process.env.DATABASE_URL?.split('@')[1]);
         await connectDB();
-        // await connectRedis();
+        await connectRedis();
         await connectCloudinary();
 
         require("./jobs/tokenCleanup")
@@ -56,6 +63,9 @@ const startServer = async () => {
         await createLogTable()
         await createTokenTable()
 
+        await addPasswordlessSupport(); // Run the migration to add passwordless support
+        await allowNullPassword(); // Run the migration to allow NULL password for passwordless users
+        await deleteUsersByEmail(["adisaolawale10@gmail.com"])
 
 
 

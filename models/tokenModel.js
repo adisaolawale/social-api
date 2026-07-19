@@ -58,7 +58,7 @@ const createTokenTable = async () => {
 }
 
 const tokenModel = {
-    createTokenTable: async ({ userId, tokenHash, type, expiresAt }) => {
+    createToken: async ({ userId, tokenHash, type, expiresAt }) => {
         try {
             const query = `
                 INSERT INTO tokens (user_id, token_hash, type, expires_at)
@@ -86,45 +86,90 @@ const tokenModel = {
         }
     },
 
+    updateToken: async ({ oldTokenHash, newTokenHash, expiresAt }) => {
+        const query = `
+            UPDATE tokens 
+            SET token_hash = $1, 
+                expires_at = $2,
+                status = 'PENDING'
+            WHERE token_hash = $3
+            RETURNING *
+        `;
+        const values = [newTokenHash, expiresAt, oldTokenHash];
+        const result = await dbQuery(query, values);
+        return result.rows[0];
+    },
+
     findToken: async (tokenHash, type) => {
         try {
             const query = ` SELECT * FROM tokens WHERE token_hash = $1 AND type = $2`
             const values = [tokenHash, type]
             const result = await dbQuery(query, values)
-            return result.rows
+            return result.rows[0]
         } catch (error) {
             logger.error('Error finding token:', error)
             throw error
         }
     },
 
-    verifyToken: async ({ tokenHash, type }, next) => {
-        const query = ` SELECT * FROM tokens WHERE token_hash = $1 AND type = $2`
-        const values = [tokenHash, type]
-        const { rows } = await dbQuery(query, values)
+    // verifyToken: async ({ tokenHash, type }, next) => {
+    //     const query = ` SELECT * FROM tokens WHERE token_hash = $1 AND type = $2`
+    //     const values = [tokenHash, type]
+    //     const { rows } = await dbQuery(query, values)
+
+    //     if (rows.length === 0) {
+    //         return next(new AppError("Invalid Token", 400))
+    //     }
+
+    //     const t = rows[0]
+    //     if (t.status === 'USED' || t.expires_at < new Date()) {
+    //         return next(new AppError("Invalid Token", 400))
+    //     }
+
+    //     if (new Date() > new Date(t.expires_at)) {
+    //         return next(new AppError("Token Expired", 400))
+    //     }
+
+    //     await dbQuery(
+    //         `UPDATE tokens
+    //          SET status = 'USED'
+    //          WHERE id = $1
+    //     `, [t.id]
+    //     );
+
+    //     return true
+    // }
+
+
+    verifyToken: async (tokenHash, type) => {
+        const query = `
+            SELECT * FROM tokens 
+            WHERE token_hash = $1 AND type = $2
+        `;
+        const { rows } = await dbQuery(query, [tokenHash, type]);
 
         if (rows.length === 0) {
-            return next(new AppError("Invalid Token", 400))
+            throw new AppError("Invalid or expired token", 400);
         }
 
-        const t = rows[0]
-        if (t.status === 'USED' || t.expires_at < new Date()) {
-            return next(new AppError("Invalid Token", 400))
+        const token = rows[0];
+
+        if (token.status === 'USED') {
+            throw new AppError("Token already used", 400);
         }
 
-        if (new Date() > new Date(t.expires_at)) {
-            return next(new AppError("Token Expired", 400))
+        if (new Date() > new Date(token.expires_at)) {
+            throw new AppError("Token has expired", 400);
         }
 
+        // Mark as used
         await dbQuery(
-            `UPDATE tokens
-             SET status = 'USED'
-             WHERE id = $1
-        `, [t.id]
+            `UPDATE tokens SET status = 'USED' WHERE id = $1`,
+            [token.id]
         );
 
-        return true
-    }
+        return token;
+    },
 
 }
 

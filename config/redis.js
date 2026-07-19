@@ -1,3 +1,5 @@
+const dotenv = require('dotenv');
+dotenv.config();
 const { createClient } = require('redis');
 
 // src/config/redis.js

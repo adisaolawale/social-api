@@ -26,7 +26,13 @@ const logger = require('./config/logger');
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3000',   // Your Next.js frontend URL
+  // origin: ['http://localhost:3000', 'https://yourdomain.com'], // multiple if needed
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(helmet());
 
 if (process.env.NODE_ENV === 'development') {

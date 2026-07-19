@@ -269,7 +269,7 @@ router.post('/comments/:commentId', protect, likeComment);
  *                schema:
  *                  $ref: '#/components/schemas/Error'
  */
-router.delete('/comments/:commenttId', protect, unlikeComment);
+router.delete('/comments/:commentId', protect, unlikeComment);
 
 
 /**

@@ -1,63 +1,125 @@
+const dotenv = require("dotenv")
+dotenv.config()
 const jwt = require('jsonwebtoken');
-
 const { redisClient } = require('../config/redis');
 const { UserModel } = require('../models/userModel');
 const AppError = require('../utils/AppError');
 const { SessionModel } = require('../models/sessionModel');
 const { successResponse } = require('../utils/response');
 
+// const protect = async (req, res, next) => {
+//     try {
+//         let token;
+
+//         // Check if token exists in headers
+//         if (
+//             req.headers.authorization &&
+//             req.headers.authorization.startsWith('Bearer')
+//         ) {
+//             token = req.headers.authorization.split(' ')[1];
+//             console.log("1 middleware token", token)
+//         }
+
+//         console.log("2nd middleware token",token)
+//         // If no token
+//         if (!token) {
+//             return next(new AppError('Unauthorized', 401));
+//         }
+
+//         // Verify token
+//         const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+//         console.log("decoded", decoded)
+//         //Check session
+//         const session = await SessionModel.getSessionById(decoded.sessionId);
+
+//         if (!session || !session.is_valid) {
+//             return next(new AppError('Session expired', 401));
+//         }
+
+
+//         // If not in cache get from database
+//         const user = await UserModel.findById(decoded.id);
+//         if (!user) {
+//             return next(new AppError('Not authorized', 401));
+//         }
+
+
+//         // Set user in request
+//         req.user = { sessionId: decoded.sessionId, ...user };
+//         next();
+//     } catch (error) {
+//         if (error.name === 'JsonWebTokenError') {
+//             return next(new AppError('Not authorized', 401));
+//         }
+
+//         if (error.name === 'TokenExpiredError') {
+//             return next(new AppError('Not authorized. Token expired', 401));
+//         }
+
+//         next(error)
+//     }
+// }
+
+
 const protect = async (req, res, next) => {
     try {
         let token;
 
-        // Check if token exists in headers
         if (
             req.headers.authorization &&
             req.headers.authorization.startsWith('Bearer')
         ) {
             token = req.headers.authorization.split(' ')[1];
-            console.log(token)
         }
 
-        console.log(token)
-        // If no token
         if (!token) {
             return next(new AppError('Unauthorized', 401));
         }
 
-        // Verify token
         const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
 
-        //Check session
+        // Get session from DB
         const session = await SessionModel.getSessionById(decoded.sessionId);
 
+        console.log("Session check:", {
+            sessionId: decoded.sessionId,
+            found: !!session,
+            is_valid: session?.is_valid,
+            expires_at: session?.expires_at
+        });
         if (!session || !session.is_valid) {
             return next(new AppError('Session expired', 401));
         }
 
+        // Optional: Check if session is expired in DB
+        if (new Date(session.expires_at) < new Date()) {
+            return next(new AppError('Session expired', 401));
+        }
 
-        // If not in cache get from database
+        // Update last used time (important for security)
+        await SessionModel.updateLastUsed(decoded.sessionId).catch(() => { });
+
         const user = await UserModel.findById(decoded.id);
         if (!user) {
             return next(new AppError('Not authorized', 401));
         }
 
+        req.user = {
+            sessionId: decoded.sessionId,
+            ...user
+        };
 
-        // Set user in request
-        req.user = { sessionId: decoded.sessionId, ...user };
         next();
     } catch (error) {
         if (error.name === 'JsonWebTokenError') {
             return next(new AppError('Not authorized', 401));
         }
-
         if (error.name === 'TokenExpiredError') {
             return next(new AppError('Not authorized. Token expired', 401));
         }
-
-        next(error)
+        next(error);
     }
-}
+};
 
 
 // Role based access control

@@ -225,8 +225,9 @@ const getFollowCount = async (req, res, next) => {
 // @access   Private
 const checkFollow = async (req, res, next) => {
     try {
-        const { id: following_id } = req.params;
+        const { userId: following_id } = req.params; // was: { id: following_id }
         const follower_id = req.user.id
+
 
         const follow = await FollowModel.isFollowing({
             followerId: follower_id,
