@@ -1,134 +1,98 @@
 const dotenv = require('dotenv');
 dotenv.config();
 const { createClient } = require('redis');
+const logger = require('../config/logger'); 
 
-// src/config/redis.js
-const logger = require('../config/logger')
+let redisClient;
 
-const redisClient = createClient({
-  url: process.env.REDIS_URL,
-})
-
-redisClient.on('error', (err) => {
-  // Only log — do not crash the app on Redis errors
-  logger.error('Redis connection error:', err.message)
-})
-
-redisClient.on('reconnecting', () => {
-  logger.warn('Redis reconnecting...')
-})
-
-async function connectRedis() {
-  // const isUpstash = process.env.REDIS_URL &&
-  //   process.env.REDIS_URL.includes('upstash.io') &&
-  //   process.env.NODE_ENV === 'production'
-
-  // const isLocal = process.env.NODE_ENV === 'development'
-
-
-
-  // if (isUpstash) {
-  //   // Upstash requires rediss:// not redis://
-  //   // Replace redis:// with rediss:// automatically
-  //   const redisUrl = process.env.REDIS_URL.replace(
-  //     'redis://',
-  //     'rediss://'
-  //   )
-
-  //   redisClient = createClient({ url: redisUrl })
-  //   logger.info("Connected to upstash Redis")
-
-  // } else if (isLocal) {
-  //   // Local Redis — no TLS, simple connection
-  //   redisClient = createClient({
-  //     socket: {
-  //       host: process.env.REDIS_HOST || 'localhost',
-  //       port: parseInt(process.env.REDIS_PORT) || 6379,
-  //     },
-  //   })
-  //   logger.info("Connected to local Redis")
-
-  // } else {
-  //   // Other hosted Redis — use URL as is
-  //   redisClient = createClient({
-  //     url: process.env.REDIS_URL,
-  //   })
-  // }
-
-  // redisClient = createClient({
-  //   url: process.env.REDIS_URL,
-  // })
-
-  // redisClient.on('error', (err) => {
-  //   // Only log — do not crash the app on Redis errors
-  //   logger.error('Redis connection error:', err.message)
-  // })
-
-  // redisClient.on('reconnecting', () => {
-  //   logger.warn('Redis reconnecting...')
-  // })
-
-  await redisClient.connect()
-  logger.info("Redis connected successfully")
-  // return redisClient
+// 1. Initialize the client configuration conditionally based on environment
+if (process.env.NODE_ENV === 'production') {
+  // Upstash requires secure websockets/tls protocol (rediss://)
+  const redisUrl = (process.env.REDIS_URL || '').replace('redis://', 'rediss://');
+  
+  redisClient = createClient({ 
+    url: redisUrl 
+  });
+  logger.info("Configured for Upstash Production Redis");
+} else {
+  // Local Development Redis configuration
+  redisClient = createClient({
+    socket: {
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT) || 6379,
+    },
+  });
+  logger.info("Configured for Local Development Redis");
 }
 
-// function getRedisClient() {
-//   if (!redisClient) {
-//     throw new Error('Redis not connected. Call connectRedis first.')
-//   }
-//   return redisClient
-// }
+// 2. Global event listeners for operational handling
+redisClient.on('error', (err) => {
+  logger.error('Redis runtime connection error:', err.message);
+});
+
+redisClient.on('reconnecting', () => {
+  logger.warn('Redis reconnecting...');
+});
+
+// 3. Clean startup execution flow
+async function connectRedis() {
+  try {
+    await redisClient.connect();
+    logger.info("Redis connected successfully");
+  } catch (err) {
+    // Gracefully catch boot failures so the Express server doesn't crash on Render
+    logger.error("Redis failed to initialize during server startup:", err.message);
+  }
+}
 
 const redis = {
   async get(key) {
     try {
-      const data = await redisClient.get(key)
-      return data ? JSON.parse(data) : null
+      const data = await redisClient.get(key);
+      return data ? JSON.parse(data) : null;
     } catch (error) {
-      logger.error('Redis get error:', error.message)
-      return null
+      logger.error('Redis get error:', error.message);
+      return null;
     }
   },
 
   async set(key, value, ttlSeconds = null) {
     try {
-      const serialized = JSON.stringify(value)
+      const serialized = JSON.stringify(value);
       if (ttlSeconds) {
-        await redisClient.setEx(key, ttlSeconds, serialized)
+        await redisClient.setEx(key, ttlSeconds, serialized);
       } else {
-        await redisClient.set(key, serialized)
+        await redisClient.set(key, serialized);
       }
     } catch (error) {
-      logger.error('Redis set error:', error.message)
+      logger.error('Redis set error:', error.message);
     }
   },
 
   async del(key) {
     try {
-      await redisClient.del(key)
+      await redisClient.del(key);
     } catch (error) {
-      logger.error('Redis del error:', error.message)
+      logger.error('Redis del error:', error.message);
     }
   },
 
   async exists(key) {
     try {
-      return await redisClient.exists(key)
+      return await redisClient.exists(key);
     } catch (error) {
-      logger.error('Redis exists error:', error.message)
-      return 0
+      logger.error('Redis exists error:', error.message);
+      return 0;
     }
   },
 
   async expire(key, ttlSeconds) {
     try {
-      await redisClient.expire(key, ttlSeconds)
+      await redisClient.expire(key, ttlSeconds);
     } catch (error) {
-      logger.error('Redis expire error:', error.message)
+      logger.error('Redis expire error:', error.message);
     }
   },
-}
+};
 
-
-module.exports = { connectRedis, redisClient, redis }
+module.exports = { connectRedis, redisClient, redis };
