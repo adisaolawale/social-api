@@ -18,6 +18,7 @@ const generateOTP = require('../utils/generateOTP');
 const tokenType = require('../constants/tokenType');
 const { verificationEmailTemplate, passwordResetEmailTemplate } = require('../utils/emailTemplate');
 const transport = require('../config/sendMail');
+const sendEmailResend = require('../config/sendEmailResend');
 const { resolveUsername } = require('../utils/resolveUsername');
 const ErrorCodes = require('../constants/errorCodes');
 
@@ -47,7 +48,7 @@ const sendVerificationCodeForUnverifiedUser = async (user) => {
         900
     );
 
-    await transport.sendMail({
+    await sendEmailResend({
         to: user.email,
         subject: 'Verify your account',
         html: verificationEmailTemplate(user.full_name, verificationToken)
@@ -80,7 +81,7 @@ const sendVerificationCodeForLogin = async (user) => {
         600 // 10 minutes
     );
 
-    await transport.sendMail({
+    await sendEmailResend({
         to: user.email,
         subject: 'Your Login Code',
         html: verificationEmailTemplate(user.full_name || 'User', otp)
@@ -158,7 +159,7 @@ const register = async (req, res, next) => {
         // Add welcome email to queue
         // await sendWelcomeEmail(user, verificationToken)
 
-        await transport.sendMail({
+        await sendEmailResend({
             to: user.email,
             subject: 'Welcome to our app! Please verify your email',
             html: verificationEmailTemplate(user.full_name, verificationToken)
@@ -242,7 +243,7 @@ const resendVerificationCode = async (req, res, next) => {
         await redis.set(`resend_count:${identificationToken}`, parseInt(resendCount) + 1, 3600); // 1 hour
 
         // Send email
-        await transport.sendMail({
+        await sendEmailResend({
             to: user.email,
             subject: 'Your new verification code',
             html: verificationEmailTemplate(user.full_name, newVerificationToken)
@@ -761,7 +762,7 @@ const forgotPassword = async (req, res, next) => {
 
         // Send email - non blocking
 
-        await transport.sendMail({
+        await sendEmailResend({
             to: user.email,
             subject: 'Password Reset Request',
             html: passwordResetEmailTemplate(user.fullName, resetToken)

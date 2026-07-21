@@ -9,7 +9,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const sendEmailResend = async ({ to, subject, html }) => {
     try {
         const { data, error } = await resend.emails.send({
-            from: 'onboarding@resend.dev',
+            from: 'Ayeo <info@ayeo.name.ng>',
             to: [to],
             subject,
             html
